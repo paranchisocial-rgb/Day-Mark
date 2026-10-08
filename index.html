@@ -159,6 +159,12 @@ textarea.jw{min-height:162px;background-attachment:local;padding:12px 14px}
 .hyc{display:grid;grid-template-rows:repeat(7,11px);grid-auto-flow:column;gap:2px;width:max-content}.hyc i{display:block;border-radius:3px;background:var(--tile)}.hyc i.e{background:none}.hyc i.f{opacity:.4}.hyc i.td{outline:1.5px solid var(--a)}.hyc i.sl{outline:2px solid var(--ink);outline-offset:1px;position:relative;z-index:1}.hyc i.pf{box-shadow:inset 0 0 0 1.5px #ffd166}
 .hmd{margin-top:14px;padding:12px 13px;border-radius:14px;background:var(--tile);border:var(--bd)}.hpill{padding:3px 11px;border-radius:99px;font-weight:700;font-size:12px}.hmt{display:flex;align-items:center;gap:9px;font-size:13px;margin-top:7px}.hmt i{width:8px;height:8px;border-radius:50%;background:var(--line);flex:none}.hmt i.ok{background:#3fb58a}.hmt span{min-width:0;word-break:break-word}
 .mv{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.mv button{display:flex;flex-direction:column;align-items:center;gap:5px;padding:11px 0 9px;border-radius:14px;border:var(--bd);background:var(--bg);color:var(--ink);font-size:11.5px;font-weight:600}.mv button:disabled{opacity:.3}.mv button:active:not(:disabled){transform:scale(.96)}
+.gs{overflow-x:auto;scrollbar-width:none;gap:2px}.gs::-webkit-scrollbar{display:none}.gs button{flex:none;padding:9px 14px;white-space:nowrap}
+.gh{display:flex;align-items:center;justify-content:space-between;padding:10px}
+.gb{width:40px;height:40px;border-radius:12px;border:var(--bd);background:var(--tile);color:var(--a);display:grid;place-items:center;padding:0}
+.gc{text-align:center;min-width:0}.gc b{display:block;font:700 17px var(--fs)}.gc span{font-size:12px;color:var(--mute)}
+.gbar{height:6px;border-radius:6px;background:var(--line);margin-top:10px;overflow:hidden}.gbar u{display:block;height:100%;background:var(--a);border-radius:6px;transition:width .4s}
+.gt .tx span{display:block}
 </style>
 </head>
 <body>
@@ -171,12 +177,13 @@ textarea.jw{min-height:162px;background-attachment:local;padding:12px 14px}
 <script>
 /* ===== Storage ===== */
 const LS='discipline_v1';
-let S={tasks:{},journal:{},mood:{},theme:'light',routines:[],rg:{}};
+let S={tasks:{},journal:{},mood:{},theme:'light',routines:[],rg:{},goals:[]};
 let _raw=null;try{_raw=localStorage.getItem(LS);Object.assign(S,JSON.parse(_raw)||{})}catch(e){if(_raw)try{localStorage.setItem(LS+'_rescue',_raw)}catch(x){}}
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
 ['tasks','journal','mood','rg'].forEach(k=>{if(!S[k]||typeof S[k]!='object'||Array.isArray(S[k]))S[k]={}});if(!Array.isArray(S.routines))S.routines=[];
-if(S.v!==2&&S.v!==3){S.theme=({country:'dark',mughal:'light',dark:'minimal'})[S.theme]||'light';S.v=2}
-if(S.v<3)S.v=3; /* v3 adds routines + rg (log of generated routine days) */
+if(!Array.isArray(S.goals))S.goals=[];S.goals=S.goals.filter(g=>g&&typeof g.t=='string'&&typeof g.k=='string'&&typeof g.id=='string');
+if(S.v!==2&&S.v!==3&&S.v!==4){S.theme=({country:'dark',mughal:'light',dark:'minimal'})[S.theme]||'light';S.v=2}
+if(S.v<3)S.v=3;if(S.v<4)S.v=4; /* v4 adds goals */ /* v3 adds routines + rg (log of generated routine days) */
 /* save() is debounced: many edits in a row cost one write. flush() writes now (also runs when the app is hidden). */
 let _dirty=0,_st=0,_sc={},_sk=null,_gs='',_ver=0; /* _ver changes whenever data changes (Stats cache key) */
 const save=()=>{_dirty=1;_sc={};_sk=null;_ver++;clearTimeout(_st);_st=setTimeout(flush,300)};
@@ -211,6 +218,7 @@ function resetRoutine(r){Object.keys(S.rg).filter(k=>k>=TODAY).forEach(k=>{const
 /* ===== Icons (inline SVG) ===== */
 const P={up:'M12 19V6M6.5 11.5L12 6l5.5 5.5',down:'M12 5v13M6.5 12.5L12 18l5.5-5.5',top:'M5 5h14M12 19V9M6.5 13.5L12 8l5.5 5.5',bot:'M5 19h14M12 5v10M6.5 10.5L12 16l5.5-5.5',sound:'M4 9.5v5h3.5l4.5 4v-13l-4.5 4H4zM15.5 9a4 4 0 010 6M18 6.5a8 8 0 010 11',check:'M5 12.5l4.5 4.5L19 7.5',plus:'M12 5v14M5 12h14',left:'M15 5l-7 7 7 7',right:'M9 5l7 7-7 7',flame:'M12 3c1 4 5 5 5 10a5 5 0 01-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-9z',trophy:'M8 4h8v5a4 4 0 01-8 0zM8 6H4c0 3 1 4 4 4M16 6h4c0 3-1 4-4 4M12 13v4M8 20h8M10 17h4',dl:'M12 4v11M7 11l5 5 5-5M5 20h14',ul:'M12 20V9M7 13l5-5 5 5M5 4h14',warn:'M12 4l9 16H3zM12 10v4M12 17v.5',pen:'M4 20l1-4L16 5l3 3L8 19zM14 7l3 3',lock:'M6 11h12v9H6zM8 11V8a4 4 0 018 0v3',trash:'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6',home:'M3 11l9-8 9 8M5 10v10h14V10',calendar:'M6 5h12a3 3 0 013 3v10a3 3 0 01-3 3H6a3 3 0 01-3-3V8a3 3 0 013-3zM8 3v4M16 3v4M3 10h18',stats:'M5 20V10M12 20V4M19 20v-7',settings:'M4 7h9M17 7h3M4 17h3M11 17h9M15 5v4M9 15v4',ok:'M12 3a9 9 0 100 18 9 9 0 000-18zM8 12.5l3 3 5-6',clock:'M12 3a9 9 0 100 18 9 9 0 000-18zM12 7v5l3 2',heart:'M12 20s-7-4.5-7-10a4 4 0 017-2.5A4 4 0 0119 10c0 5.5-7 10-7 10z',briefcase:'M4 8h16v11H4zM9 8V5h6v3M4 13h16',book:'M5 4h10a3 3 0 013 3v13H8a3 3 0 01-3-3zM5 17a3 3 0 013-3h10',leaf:'M5 19c0-8 5-13 14-14 0 9-5 14-13 14M5 19l7-7',star:'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z',sun:'M12 8a4 4 0 100 8 4 4 0 000-8zM12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19',moon:'M20 14A8 8 0 019.5 4 8 8 0 1020 14z',diamond:'M12 3l9 9-9 9-9-9zM3 12h18',db:'M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3',list:'M4 7h16M4 12h16M4 17h10',today:'M12 3a9 9 0 100 18 9 9 0 000-18zM12 9a3 3 0 100 6 3 3 0 000-6z',repeat:'M17 3l3 3-3 3M4 11V9a3 3 0 013-3h13M7 21l-3-3 3-3M20 13v2a3 3 0 01-3 3H4'};
 const LOGO='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V12C5 7.5 8 4 12 2c4 2 7 5.5 7 10v9"/><path d="M8.5 14.5l2.5 2.5 4.5-5"/></svg>';
+P.goals='M12 21a9 9 0 100-18 9 9 0 000 18zM12 16.5a4.5 4.5 0 100-9 4.5 4.5 0 000 9zM12 12.8a.8.8 0 100-1.6.8.8 0 000 1.6z';
 const I=(n,s=20)=>`<svg class="i" viewBox="0 0 24 24" width="${s}" height="${s}"><path d="${P[n]}"/></svg>`;
 const MOUTH=[10,12,15,17,19],MN=['Rough','Low','Okay','Good','Great'];
 const face=(v,s=30)=>`<svg class="i" viewBox="0 0 24 24" width="${s}" height="${s}"><circle cx="12" cy="12" r="10"/><path d="M9 10v.5M15 10v.5M8 ${v<3?17:14.5}Q12 ${MOUTH[v-1]} 16 ${v<3?17:14.5}"/></svg>`;
@@ -238,9 +246,9 @@ function topHTML(){const b=sub(),st=streakNow()[0];_gs=b;return `<div class="log
 const stk=n=>`<span class="stk${n?'':' z'}" title="${n} day streak" aria-label="${n} day streak">${I('flame',12)}${n}</span>`;
 function render(){if(genDay(cur)|genDay(calSel))save();document.documentElement.dataset.theme=S.theme;document.querySelector('meta[name=theme-color]').content=TC[S.theme];
 put('#top',topHTML());
-put('#nav',['home','calendar','stats','settings'].map(v=>`<button class="${v==view?'on':''}" onclick="go('${v}')">${I(v,22)}<span>${v[0].toUpperCase()+v.slice(1)}</span></button>`).join(''));
-put('#fab',view=='home'||view=='calendar'?`<button class="fab" aria-label="Add task" onclick="sheetTask('${view=='home'?cur:calSel}')">${I('plus',26)}</button>`:'');
-{let h;try{h=({home:Home,calendar:Cal,stats:StatsC,settings:Settings})[view]()}catch(e){h='<div class="card empty"><h3>Something went wrong</h3><p>Your data is safe. Switch tabs or reopen the app.</p></div>'}put('#app',h)}if(view=='stats'&&hm.t=='year')hmScroll()}
+put('#nav',['home','calendar','stats','goals','settings'].map(v=>`<button class="${v==view?'on':''}" onclick="go('${v}')">${I(v,22)}<span>${v[0].toUpperCase()+v.slice(1)}</span></button>`).join(''));
+put('#fab',view=='home'||view=='calendar'?`<button class="fab" aria-label="Add task" onclick="sheetTask('${view=='home'?cur:calSel}')">${I('plus',26)}</button>`:view=='goals'?`<button class="fab" aria-label="Add goal" onclick="sheetGoal()">${I('plus',26)}</button>`:'');
+{let h;try{h=({home:Home,calendar:Cal,stats:StatsC,goals:Goals,settings:Settings})[view]()}catch(e){h='<div class="card empty"><h3>Something went wrong</h3><p>Your data is safe. Switch tabs or reopen the app.</p></div>'}put('#app',h)}if(view=='stats'&&hm.t=='year')hmScroll();if(view=='goals')gsScroll()}
 let _an;function go(v){const a=$('#app');a.classList.add('an');clearTimeout(_an);_an=setTimeout(()=>a.classList.remove('an'),450);view=v;render();scrollTo(0,0)}
 function cycleTheme(){const i=TH.findIndex(t=>t[0]==S.theme);S.theme=TH[(i+1)%3][0];save();render()}
 
@@ -841,7 +849,7 @@ function StatsC(){const k=range+'|'+_ver+'|'+TODAY+'|'+hm.t+hm.o+'|'+hmSel;if(_s
 
 /* ===== Settings ===== */
 const row=(ic,t,s,fn,cls='')=>`<button class="r ${cls}" ${fn?`onclick="${fn}"`:'style="cursor:default"'}><span>${I(ic,24)}</span><div><b>${t}</b><small>${s}</small></div>${fn?`<span>${I('right',18)}</span>`:''}</button>`;
-function Settings(){flush();const st=((_lsz||(()=>{try{return(localStorage.getItem(LS)||'').length}catch(e){return 0}})())/1024).toFixed(1),n=Object.values(S.tasks).reduce((a,b)=>a+b.length,0)+Object.keys(S.journal).length;
+function Settings(){flush();const st=((_lsz||(()=>{try{return(localStorage.getItem(LS)||'').length}catch(e){return 0}})())/1024).toFixed(1),n=Object.values(S.tasks).reduce((a,b)=>a+b.length,0)+Object.keys(S.journal).length+S.goals.length;
 return `<h2 class="sec" style="margin-top:6px">Appearance</h2>
 <div class="card"><div class="lb">Theme</div><div class="seg3">${TH.map(t=>`<button class="${S.theme==t[0]?'on':''}" onclick="S.theme='${t[0]}';save();render()">${I(t[2],22)}${t[1]}</button>`).join('')}</div></div>
 <div class="card list li">${row('sound','Sound and vibration',S.snd===false?'Off':'On, plays when a day is perfect','toggleSnd()')}</div>
@@ -856,6 +864,40 @@ ${djCard()}
 <h2 class="sec">Privacy</h2>
 <div class="card"><div class="row" style="align-items:flex-start;gap:14px"><span style="color:var(--a)">${I('lock',22)}</span><div><b style="font-size:15px;font-weight:500">Your data stays on this device</b><p class="mute" style="line-height:1.6;margin:8px 0 0">Everything is stored in this browser's local storage. There is no account, cloud, server or tracking, and the app works fully offline. Clearing browser data or changing device will lose it, so export a CSV backup regularly.</p></div></div></div>`}
 
+/* ===== Goals ===== */
+const GP=[['w','Weekly'],['m','Monthly'],['q','Quarterly'],['h','Half-yearly'],['y','Annual']];
+let gp='w',gpo=0;
+const gsh=d=>d.toLocaleDateString(undefined,{day:'numeric',month:'short'}),gn=(o,w)=>o==0?'This '+w:o==-1?'Last '+w:o==1?'Next '+w:'',gj=a=>a.filter(Boolean).join(' · ');
+const MN3=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function gper(t,o){const d=parse(TODAY),y=d.getFullYear(),m=d.getMonth();
+ if(t=='w'){const s=new Date(y,m,d.getDate()-(d.getDay()+6)%7+o*7),e=new Date(s.getFullYear(),s.getMonth(),s.getDate()+6);return{k:'w'+key(s),l:gsh(s)+' – '+gsh(e),n:gj([gn(o,'week'),s.getFullYear()])}}
+ if(t=='m'){const T=y*12+m+o,yy=Math.floor(T/12),mm=T%12;return{k:'m'+yy+'-'+p2(mm+1),l:new Date(yy,mm,1).toLocaleDateString(undefined,{month:'long',year:'numeric'}),n:gn(o,'month')}}
+ if(t=='q'){const T=y*4+Math.floor(m/3)+o,yy=Math.floor(T/4),q=T%4;return{k:'q'+yy+'-'+(q+1),l:'Q'+(q+1)+' '+yy,n:gj([gn(o,'quarter'),MN3[q*3]+' – '+MN3[q*3+2]])}}
+ if(t=='h'){const T=y*2+(m>5?1:0)+o,yy=Math.floor(T/2),h=T%2;return{k:'h'+yy+'-'+(h+1),l:'H'+(h+1)+' '+yy,n:gj([gn(o,'half-year'),h?'Jul – Dec':'Jan – Jun'])}}
+ const yy=y+o;return{k:'y'+yy,l:String(yy),n:gn(o,'year')}}
+const goalRow=g=>`<div class="task gt ${g.d?'dn':''}" role="button" tabindex="0" onclick="sheetGoal('${g.id}')" onkeydown="if(event.key=='Enter'&&event.target==this)sheetGoal('${g.id}')"><div class="tx"><b>${esc(g.t)}</b>${g.n?`<span>${esc(g.n)}</span>`:''}</div><button class="chk ${g.d?'on':''}" aria-label="Toggle goal" onclick="event.stopPropagation();gTog('${g.id}')">${g.d?I('check',17):''}</button></div>`;
+function Goals(){const P=gper(gp,gpo),L=S.goals.filter(g=>g.k==P.k),dn=L.filter(g=>g.d).length,pc=L.length?Math.round(dn/L.length*100):0,nm=GP.find(x=>x[0]==gp)[1];
+return `<div class="seg gs">${GP.map(x=>`<button class="${x[0]==gp?'on':''}" onclick="gSel('${x[0]}')">${x[1]}</button>`).join('')}</div>
+<div class="card gh"><button class="gb" aria-label="Previous period" onclick="gMove(-1)">${I('left',20)}</button><div class="gc"><b>${esc(P.l)}</b><span>${esc(P.n)||'&nbsp;'}</span></div><button class="gb" aria-label="Next period" onclick="gMove(1)">${I('right',20)}</button></div>
+${L.length?`<div class="card"><div class="row sp"><b>${dn} of ${L.length} done</b><span class="mute">${pc}%</span></div><div class="gbar"><u style="width:${pc}%"></u></div></div><div class="card list">${L.map(goalRow).join('')}</div><div class="mute" style="text-align:center;font-size:12px;margin-top:10px">Tap a goal to edit or delete</div>`
+:`<div class="card empty"><div class="big">${I('goals',34)}</div><h3>No ${nm.toLowerCase()} goals yet</h3><p>Add what you want to achieve in this period.</p><button class="btn" onclick="sheetGoal()">${I('plus',18)} Add goal</button></div>`}`}
+function gsScroll(){const b=$('.gs .on'),c=$('.gs');if(b&&c)c.scrollLeft=b.offsetLeft-(c.clientWidth-b.offsetWidth)/2}
+function gSel(t){gp=t;gpo=0;render()}
+function gMove(n){gpo+=n;render()}
+function gTog(id){const g=S.goals.find(x=>x.id==id);if(!g)return;g.d=!g.d;save();render();if(g.d&&S.goals.filter(x=>x.k==g.k).every(x=>x.d))celebrate()}
+function sheetGoal(id){const g=id?S.goals.find(x=>x.id==id):null;if(id&&!g)return;sh={gid:id||''};const P=gper(gp,gpo),nm=GP.find(x=>x[0]==gp)[1];
+modal(`<div class="grab"></div><h3 class="sht">${g?'Edit goal':'New goal'}</h3><div class="mute" style="margin-bottom:16px">${nm} · ${esc(P.l)}</div>
+<input class="in" id="ti" maxlength="120" placeholder="What do you want to achieve?" value="${esc(g?g.t:'')}" onkeydown="if(event.key=='Enter')saveGoal()">
+<div class="lb" style="margin:20px 0 10px">Note (optional)</div>
+<input class="in" id="gnote" maxlength="160" placeholder="Why it matters, or how you will measure it" value="${esc(g&&g.n?g.n:'')}" onkeydown="if(event.key=='Enter')saveGoal()">
+<div class="row" style="margin-top:24px">${g?`<button class="btn dn" aria-label="Delete" onclick="delGoal()">${I('trash',20)}</button>`:''}<button class="btn" style="flex:1" onclick="saveGoal()">${g?'Save changes':'Add goal'}</button></div>`);
+if(!g)setTimeout(()=>$('#ti')&&$('#ti').focus(),60)}
+function saveGoal(){const v=$('#ti').value.trim();if(!v)return $('#ti').focus();const n=$('#gnote').value.trim();
+if(sh.gid){const g=S.goals.find(x=>x.id==sh.gid);if(!g)return closeM();g.t=v;g.n=n}
+else S.goals.push({id:uid(),t:v,n,p:gp,k:gper(gp,gpo).k,d:false});
+save();closeM();render()}
+function delGoal(){const i=S.goals.findIndex(x=>x.id==sh.gid);if(i<0)return closeM();const g=S.goals.splice(i,1)[0];save();closeM();render();toast('Goal deleted',()=>{S.goals.splice(i,0,g);save();render()})}
+
 /* ===== CSV ===== */
 const q=s=>'"'+String(s).replace(/"/g,'""')+'"';
 function exportCSV(){const L=['type,date,id,done,text,category,routine'];
@@ -863,6 +905,7 @@ Object.keys(S.tasks).sort().forEach(k=>S.tasks[k].forEach(t=>L.push(['task',k,t.
 Object.keys(S.journal).sort().forEach(k=>L.push(['journal',k,'','',q(S.journal[k]),''].join(',')));
 Object.keys(S.mood).sort().forEach(k=>L.push(['mood',k,'','',q(S.mood[k]),''].join(',')));
 S.routines.forEach(r=>L.push(['routine',r.from,r.id,r.days.map(d=>DN[d]).join('|'),q(r.t),r.c,''].join(',')));
+S.goals.forEach(g=>L.push(['goal',g.k,g.id,g.d?1:0,q(g.t),g.p,q(g.n||'')].join(',')));
 L.push(['setting','','','',q(S.theme),''].join(','));
 const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+L.join('\n')],{type:'text/csv'}));a.download='daymark-backup-'+TODAY+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);toast('Backup exported')}
 function parseCSV(t){const rows=[];let r=[],f='',inQ=false;for(let i=0;i<t.length;i++){const c=t[i];
@@ -870,11 +913,12 @@ if(inQ){if(c=='"'){if(t[i+1]=='"'){f+='"';i++}else inQ=false}else f+=c}
 else if(c=='"')inQ=true;else if(c==','){r.push(f);f=''}else if(c=='\n'||c=='\r'){if(c=='\r'&&t[i+1]=='\n')i++;r.push(f);rows.push(r);r=[];f=''}else f+=c}
 if(f||r.length){r.push(f);rows.push(r)}return rows}
 function importCSV(file){if(!file)return;const fr=new FileReader();fr.onload=()=>{let rows;try{
-rows=parseCSV(String(fr.result).replace(/^\uFEFF/,'')).filter(r=>r.length>=5&&r[0]!='type');if(!rows.some(r=>['task','journal','mood','routine'].includes(r[0])))throw 0}catch(e){return toast('Not a valid backup CSV')}
+rows=parseCSV(String(fr.result).replace(/^\uFEFF/,'')).filter(r=>r.length>=5&&r[0]!='type');if(!rows.some(r=>['task','journal','mood','routine','goal'].includes(r[0])))throw 0}catch(e){return toast('Not a valid backup CSV')}
 window._rows=rows;modal(`<h3 class="sht">Import ${rows.length} records?</h3><p class="mute" style="line-height:1.5">Days in the file will replace the same days on this device. Other days are kept.</p><div class="row" style="margin-top:20px"><button class="btn o" style="flex:1" onclick="closeM()">Cancel</button><button class="btn" style="flex:1" onclick="doImport()">Import</button></div>`,1)};fr.readAsText(file);$('#imp').value=''}
 function doImport(){const seen={},D={test:okD};_rows.forEach(([ty,d,id,dn,tx,cc,rid])=>{tx=String(tx||'');if(ty=='task'||ty=='routine')tx=tx.trim().slice(0,120);
 if(ty=='task'&&D.test(d)){if(!seen[d]){S.tasks[d]=[];seen[d]=1}if(tx){const o={id:sid(id),t:tx,c:CATS[cc]?cc:'other',d:dn=='1'};if(/^[\w-]{1,24}$/.test(rid||''))o.r=rid;S.tasks[d].push(o)}}
 else if(ty=='routine'){const days=[...new Set(String(dn).split('|').map(x=>DN.indexOf(x)).filter(x=>x>=0))],i=sid(id);if(tx&&days.length){S.routines=S.routines.filter(x=>x.id!=i);S.routines.push({id:i,t:tx,c:CATS[cc]?cc:'other',days,from:TODAY})}}
+else if(ty=='goal'&&/^(w\d{4}-\d{2}-\d{2}|m\d{4}-\d{2}|q\d{4}-[1-4]|h\d{4}-[12]|y\d{4})$/.test(d)){const i=sid(id),t=tx.trim().slice(0,120);if(t){S.goals=S.goals.filter(x=>x.id!=i);S.goals.push({id:i,t,n:String(rid||'').trim().slice(0,160),p:d[0],k:d,d:dn=='1'})}}
 else if(ty=='journal'&&D.test(d)){if(tx.trim())S.journal[d]=tx}
 else if(ty=='mood'&&D.test(d)&&[1,2,3,4,5].includes(+tx))S.mood[d]=+tx;
 else if(ty=='setting'&&TH.some(x=>x[0]==tx))S.theme=tx});
@@ -882,17 +926,19 @@ Object.keys(seen).forEach(d=>{if(!S.tasks[d].length)delete S.tasks[d];S.rg[d]=S.
 window._rows=null;genAll();save();closeM();render();toast('Import complete')}
 /* ===== Reset ===== */
 function sheetReset(){modal(`<h3 class="sht" style="color:var(--neg)">Erase all data?</h3><p class="mute" style="line-height:1.5;margin:8px 0 16px">This permanently deletes every task, journal entry, mood and setting on this device. Export a backup first if you might need it.</p><input class="in" id="rs" placeholder="Type DELETE to confirm" autocapitalize="characters" oninput="$('#rb').disabled=this.value!=='DELETE'"><div class="row" style="margin-top:18px"><button class="btn o" style="flex:1" onclick="closeM()">Cancel</button><button class="btn dn" style="flex:1" id="rb" disabled onclick="doReset()">Erase everything</button></div>`,1)}
-function doReset(){_dirty=0;clearTimeout(_st);_sc={};_sk=null;_ver++;_lsz=0;dropDraft();jed=null;try{localStorage.removeItem(LS);localStorage.removeItem(LS+'_rescue')}catch(e){}S={tasks:{},journal:{},mood:{},theme:'light',routines:[],rg:{},v:3};cur=calSel=TODAY;closeM();render();toast('All data erased')}
+function doReset(){_dirty=0;clearTimeout(_st);_sc={};_sk=null;_ver++;_lsz=0;dropDraft();jed=null;try{localStorage.removeItem(LS);localStorage.removeItem(LS+'_rescue')}catch(e){}S={tasks:{},journal:{},mood:{},theme:'light',routines:[],rg:{},goals:[],v:4};gp='w';gpo=0;cur=calSel=TODAY;closeM();render();toast('All data erased')}
 
 /* ===== Back button =====
    Order: clear typed text -> close sheet -> leave typing field -> go Home -> press twice on Home to exit.
-   A history entry is also pushed on the first touch, because browsers skip entries added with no user interaction. */
-let _bk=0,_ex=0,_g=0;
+   Browsers skip history entries that were added without a real tap. So the app keeps a few spare entries
+   and refills them on every tap (never inside the back handler). _c = depth of the entry we are on. */
+let _bk=0,_ex=0,_c=1;
 history.replaceState({b:0},'');history.pushState({b:1},'');
-const arm=()=>{if(_g)return;_g=1;history.pushState({b:1},'')};
-['pointerdown','keydown'].forEach(t=>addEventListener(t,arm,{once:true,capture:true}));
-window.addEventListener('popstate',()=>{
+const arm=()=>{if(_ex||_c>=5)return;try{history.pushState({b:_c+1},'');_c++}catch(e){}};
+['pointerup','click','keydown'].forEach(t=>addEventListener(t,arm,{capture:true,passive:true}));
+window.addEventListener('popstate',e=>{
  if(_ex){history.back();return}
+ _c=(e.state&&e.state.b)||0;
  const el=document.activeElement,typing=el&&(el.tagName=='INPUT'&&el.type!='file'||el.tagName=='TEXTAREA'),md=$('#md').firstChild;
  let keep=true;
  if(typing&&!el.dataset.keep&&el.value){el.value='';el.dispatchEvent(new Event('input'));$('#rb')&&($('#rb').disabled=true)}
@@ -901,8 +947,8 @@ window.addEventListener('popstate',()=>{
  else if(view!='home')go('home');
  else if(Date.now()-_bk<2000)keep=false;
  else{_bk=Date.now();toast('Press back again to exit')}
- if(keep)history.pushState({b:1},'');
- else{_ex=1;try{window.close()}catch(e){}history.back()}
+ if(keep){if(_c<1){try{history.pushState({b:1},'');_c=1}catch(x){}}}
+ else{_ex=1;try{window.close()}catch(x){}history.back()}
 });
 
 /* ===== Long press on a task row -> edit/delete sheet ===== */
